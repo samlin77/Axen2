@@ -6,53 +6,62 @@
 }
 
 .app-header {
-  padding: 2rem;
-  border-bottom: 1px solid #e5e7eb;
-  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid #dbd0ba;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f5f1e6;
+}
+
+.app-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .app-header h1 {
   margin: 0;
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1f2937;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #4a3f35;
 }
 
 .subtitle {
-  margin: 0.5rem 0 0 0;
-  font-size: 1rem;
-  color: #6b7280;
+  margin: 0;
+  font-size: 0.8rem;
+  color: #7d6b56;
 }
 
 /* Navigation */
 .app-nav {
   display: flex;
   gap: 0.5rem;
-  justify-content: center;
-  margin-top: 1.5rem;
 }
 
 .nav-button {
-  padding: 0.5rem 1.5rem;
-  border: 2px solid #e5e7eb;
-  background: white;
-  color: #6b7280;
-  border-radius: 8px;
-  font-size: 0.95rem;
+  padding: 0.4rem 1rem;
+  border: none;
+  background: transparent;
+  color: #5c4d3f;
+  border-radius: 6px;
+  font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .nav-button:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
+  background: #e2d8c3;
+  color: #4a3f35;
 }
 
 .nav-button.active {
-  background: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
+  background: #a67c52;
+  color: #ffffff;
 }
 
 .app-main {
@@ -68,37 +77,41 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
+  background: #fffcf5;
 }
 
-/* MCP Tools Indicator */
+/* MCP Tools Indicator - Minimized */
 .mcp-tools-indicator {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0.75rem 2rem;
-  background: linear-gradient(90deg, #eff6ff 0%, #dbeafe 100%);
-  border-bottom: 1px solid #bfdbfe;
-  font-size: 0.85rem;
+  padding: 0.4rem 1rem;
+  background: #f5f1e6;
+  border-bottom: 1px solid #dbd0ba;
+  font-size: 0.75rem;
 }
 
 .mcp-tools-label {
-  color: #1e40af;
-  font-weight: 600;
+  color: #7d6b56;
+  font-weight: 500;
 }
 
 .mcp-tools-count {
-  color: #3b82f6;
-  background: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-weight: 500;
+  color: #a67c52;
+  background: #fffcf5;
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.7rem;
+  border: 1px solid #dbd0ba;
 }
 
 /* Message List */
 .message-list {
   flex: 1;
   overflow-y: auto;
-  padding: 2rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -109,7 +122,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #9ca3af;
+  color: #9d8a6f;
   font-size: 1rem;
 }
 
@@ -126,14 +139,15 @@
 
 .message.user {
   align-self: flex-end;
-  background: #3b82f6;
+  background: #a67c52;
   color: white;
 }
 
 .message.assistant {
   align-self: flex-start;
-  background: #f3f4f6;
-  color: #1f2937;
+  background: #fffcf5;
+  color: #4a3f35;
+  border: 1px solid #e2d8c3;
 }
 
 .message-header {
@@ -150,11 +164,11 @@
 }
 
 .message.user .message-role {
-  color: #dbeafe;
+  color: #f5f1e6;
 }
 
 .message.assistant .message-role {
-  color: #6b7280;
+  color: #7d6b56;
 }
 
 .message-time {
@@ -162,11 +176,11 @@
 }
 
 .message.user .message-time {
-  color: #dbeafe;
+  color: #ece5d8;
 }
 
 .message.assistant .message-time {
-  color: #9ca3af;
+  color: #9d8a6f;
 }
 
 .message-content {
@@ -200,20 +214,21 @@
 
 .message.assistant .message-content strong {
   font-weight: 600;
-  color: #111827;
+  color: #4a3f35;
 }
 
 .message.assistant .message-content code {
-  background: #e5e7eb;
+  background: #f5f1e6;
   padding: 0.125rem 0.25rem;
   border-radius: 3px;
   font-family: 'Monaco', 'Courier New', monospace;
   font-size: 0.9em;
+  color: #5c4d3f;
 }
 
 .message.assistant .message-content pre {
-  background: #1f2937;
-  color: #f3f4f6;
+  background: #4a3f35;
+  color: #ece5d8;
   padding: 0.75rem;
   border-radius: 6px;
   overflow-x: auto;
@@ -223,40 +238,42 @@
 .message.assistant .message-content pre code {
   background: transparent;
   padding: 0;
-  color: #f3f4f6;
+  color: #ece5d8;
 }
 
 /* Chat Input */
 .chat-input {
   display: flex;
   gap: 0.75rem;
-  padding: 1.5rem;
-  border-top: 1px solid #e5e7eb;
-  background: white;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #dbd0ba;
+  background: #fffcf5;
 }
 
 .chat-input-field {
   flex: 1;
   padding: 0.75rem 1rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid #dbd0ba;
   border-radius: 8px;
   font-size: 0.95rem;
   outline: none;
   transition: border-color 0.2s;
+  background: #ffffff;
+  color: #4a3f35;
 }
 
 .chat-input-field:focus {
-  border-color: #3b82f6;
+  border-color: #a67c52;
 }
 
 .chat-input-field:disabled {
-  background: #f9fafb;
+  background: #f5f1e6;
   cursor: not-allowed;
 }
 
 .chat-send-button {
   padding: 0.75rem 1.5rem;
-  background: #3b82f6;
+  background: #a67c52;
   color: white;
   border: none;
   border-radius: 8px;
@@ -267,11 +284,11 @@
 }
 
 .chat-send-button:hover:not(:disabled) {
-  background: #2563eb;
+  background: #8d6845;
 }
 
 .chat-send-button:disabled {
-  background: #9ca3af;
+  background: #c4b5a0;
   cursor: not-allowed;
 }
 
@@ -291,23 +308,24 @@
   width: 100%;
   height: 100%;
   overflow-y: auto;
-  padding: 2rem;
+  padding: 1.5rem;
+  background: #fffcf5;
 }
 
 .mcp-servers-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .mcp-servers-header h2 {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1f2937;
+  color: #4a3f35;
 }
 
 .mcp-servers-subtitle {
   margin: 0.5rem 0 0 0;
-  color: #6b7280;
+  color: #7d6b56;
   font-size: 0.95rem;
 }
 
@@ -318,8 +336,8 @@
 }
 
 .mcp-server-card {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  border: 1px solid #dbd0ba;
   border-radius: 12px;
   padding: 1.5rem;
   display: flex;
@@ -329,7 +347,7 @@
 }
 
 .mcp-server-card:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px -1px rgba(166, 124, 82, 0.15);
 }
 
 .mcp-server-info {
@@ -347,7 +365,7 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: #1f2937;
+  color: #4a3f35;
 }
 
 .mcp-server-status {
@@ -360,7 +378,7 @@
 
 .mcp-server-description {
   margin: 0 0 0.75rem 0;
-  color: #6b7280;
+  color: #7d6b56;
   font-size: 0.9rem;
 }
 
@@ -371,11 +389,11 @@
 .mcp-server-command code {
   display: block;
   padding: 0.5rem;
-  background: #f3f4f6;
+  background: #f5f1e6;
   border-radius: 6px;
   font-size: 0.85rem;
   font-family: 'Monaco', 'Courier New', monospace;
-  color: #4b5563;
+  color: #5c4d3f;
   overflow-x: auto;
 }
 
@@ -408,9 +426,9 @@
 
 .mcp-button {
   padding: 0.5rem 1rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid #dbd0ba;
   background: white;
-  color: #374151;
+  color: #5c4d3f;
   border-radius: 6px;
   font-size: 0.9rem;
   font-weight: 500;
@@ -419,7 +437,7 @@
 }
 
 .mcp-button:hover:not(:disabled) {
-  background: #f9fafb;
+  background: #f5f1e6;
 }
 
 .mcp-button:disabled {
@@ -428,35 +446,35 @@
 }
 
 .mcp-button-connect {
-  background: #3b82f6;
+  background: #a67c52;
   color: white;
-  border-color: #3b82f6;
+  border-color: #a67c52;
 }
 
 .mcp-button-connect:hover {
-  background: #2563eb;
+  background: #8d6845;
 }
 
 .mcp-button-disconnect {
-  background: #ef4444;
+  background: #b54a35;
   color: white;
-  border-color: #ef4444;
+  border-color: #b54a35;
 }
 
 .mcp-button-disconnect:hover {
-  background: #dc2626;
+  background: #9d3f2e;
 }
 
 .mcp-empty-state {
   text-align: center;
   padding: 3rem;
-  color: #9ca3af;
+  color: #9d8a6f;
 }
 
 /* Tool Tester */
 .tool-tester {
-  background: #f9fafb;
-  border: 2px solid #e5e7eb;
+  background: #fffcf5;
+  border: 2px solid #dbd0ba;
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
@@ -466,19 +484,19 @@
   margin: 0 0 0.25rem 0;
   font-size: 1.2rem;
   font-weight: 600;
-  color: #1f2937;
+  color: #4a3f35;
 }
 
 .tool-tester-subtitle {
   margin: 0 0 1.5rem 0;
-  color: #6b7280;
+  color: #7d6b56;
   font-size: 0.9rem;
 }
 
 .tool-tester-toggle {
   margin-top: 1rem;
   padding: 0.5rem 1rem;
-  background: #3b82f6;
+  background: #a67c52;
   color: white;
   border: none;
   border-radius: 6px;
@@ -489,7 +507,7 @@
 }
 
 .tool-tester-toggle:hover {
-  background: #2563eb;
+  background: #8d6845;
 }
 
 .tool-tester-form {
@@ -507,23 +525,25 @@
 .form-group label {
   font-weight: 600;
   font-size: 0.9rem;
-  color: #374151;
+  color: #5c4d3f;
 }
 
 .form-group select,
 .form-group textarea {
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid #dbd0ba;
   border-radius: 6px;
   font-size: 0.9rem;
   font-family: inherit;
   outline: none;
   transition: border-color 0.2s;
+  background: #ffffff;
+  color: #4a3f35;
 }
 
 .form-group select:focus,
 .form-group textarea:focus {
-  border-color: #3b82f6;
+  border-color: #a67c52;
 }
 
 .tool-args-input {
@@ -534,14 +554,14 @@
 .tool-schema-hint {
   margin-top: 0.5rem;
   padding: 0.75rem;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: #fffcf5;
+  border: 1px solid #dbd0ba;
   border-radius: 6px;
   font-size: 0.85rem;
 }
 
 .tool-schema-hint strong {
-  color: #374151;
+  color: #5c4d3f;
   display: block;
   margin-bottom: 0.5rem;
 }
@@ -550,13 +570,13 @@
   margin: 0;
   font-family: 'Monaco', 'Courier New', monospace;
   font-size: 0.8rem;
-  color: #6b7280;
+  color: #7d6b56;
   overflow-x: auto;
 }
 
 .execute-button {
   padding: 0.75rem 1.5rem;
-  background: #10b981;
+  background: #a67c52;
   color: white;
   border: none;
   border-radius: 6px;
@@ -568,11 +588,11 @@
 }
 
 .execute-button:hover:not(:disabled) {
-  background: #059669;
+  background: #8d6845;
 }
 
 .execute-button:disabled {
-  background: #9ca3af;
+  background: #c4b5a0;
   cursor: not-allowed;
 }
 
@@ -626,6 +646,6 @@
 .tool-tester-empty {
   text-align: center;
   padding: 2rem;
-  color: #9ca3af;
+  color: #9d8a6f;
   font-size: 0.95rem;
 }

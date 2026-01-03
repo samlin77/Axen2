@@ -35,13 +35,13 @@ export function MCPServers() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'connected':
-        return '#10b981';
+        return '#6fa372';
       case 'connecting':
-        return '#f59e0b';
+        return '#d4c8aa';
       case 'error':
-        return '#ef4444';
+        return '#b54a35';
       default:
-        return '#6b7280';
+        return '#7d6b56';
     }
   };
 

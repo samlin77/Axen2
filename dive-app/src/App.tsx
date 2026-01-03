@@ -80,8 +80,8 @@ function App() {
       console.log('[App] Processing message:', content);
 
       // Check if user is asking to read a file (simple pattern matching for MVP)
-      const readFileMatch = content.match(/read (?:the )?file (.+)/i);
-      const listDirMatch = content.match(/list (?:files )?(?:in |under |from )?(.+)/i);
+      const readFileMatch = content.match(/read (?:the )?files? (.+)/i);
+      const listDirMatch = content.match(/list (?:files? )?(?:in |under |from )?(.+)/i);
 
       if (readFileMatch && connectedTools.length > 0) {
         // User wants to read a file - call tool directly
@@ -135,8 +135,13 @@ function App() {
         }
       } else if (listDirMatch && connectedTools.length > 0) {
         // User wants to list directory
-        const dirPath = listDirMatch[1].trim();
-        console.log('[App] Detected directory list request:', dirPath);
+        let dirPath = listDirMatch[1].trim();
+        // Remove quotes if present
+        dirPath = dirPath.replace(/^["']|["']$/g, '');
+        // Remove trailing slash
+        dirPath = dirPath.replace(/\/$/, '');
+        console.log('[App] Detected directory list request. Original:', listDirMatch[1]);
+        console.log('[App] Cleaned path:', dirPath);
 
         setMessages((prev) =>
           prev.map((msg) =>
@@ -227,8 +232,10 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Dive AI Agent Platform</h1>
-        <p className="subtitle">Enterprise AI with Secure MCP Integration</p>
+        <div className="app-header-left">
+          <h1>Dive</h1>
+          <span className="subtitle">AI Agent Platform</span>
+        </div>
 
         <nav className="app-nav">
           <button
@@ -250,8 +257,7 @@ function App() {
           <div className="chat-container">
             {connectedTools.length > 0 && (
               <div className="mcp-tools-indicator">
-                <span className="mcp-tools-label">MCP Tools Active:</span>
-                <span className="mcp-tools-count">{connectedTools.length} tools connected</span>
+                <span className="mcp-tools-label">🔧 {connectedTools.length} tools</span>
               </div>
             )}
             <MessageList messages={messages} />
