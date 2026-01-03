@@ -2,10 +2,11 @@ import { useState, KeyboardEvent } from 'react';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
+  onClear?: () => void;
   disabled?: boolean;
 }
 
-export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
+export function ChatInput({ onSend, onClear, disabled = false }: ChatInputProps) {
   const [input, setInput] = useState('');
 
   const handleSend = () => {
@@ -24,6 +25,15 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
 
   return (
     <div className="chat-input">
+      {onClear && (
+        <button
+          onClick={onClear}
+          className="chat-clear-button"
+          title="Clear chat history"
+        >
+          Clear
+        </button>
+      )}
       <input
         type="text"
         value={input}

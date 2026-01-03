@@ -15,18 +15,58 @@ interface Message {
 
 type View = 'chat' | 'servers';
 
+// Helper function to format errors
+function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (typeof error === 'object' && error !== null) {
+    if ('error' in error) {
+      return String(error.error);
+    }
+    return JSON.stringify(error);
+  }
+  return 'An unknown error occurred';
+}
+
 function App() {
   const [currentView, setCurrentView] = useState<View>('chat');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: 'Hello! I\'m the Dive AI Assistant powered by Google Gemini with MCP integration.\n\nI can help you with various tasks. You can also connect MCP servers from the "MCP Servers" tab to give me access to additional tools and capabilities.\n\nHow can I help you today?',
-      role: 'assistant',
-      timestamp: new Date(),
-    },
-  ]);
+
+  // Load messages from localStorage or use default
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const saved = localStorage.getItem('dive-chat-history');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Convert timestamp strings back to Date objects
+        return parsed.map((msg: Message) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }));
+      } catch (e) {
+        console.error('Failed to parse saved messages:', e);
+      }
+    }
+    return [
+      {
+        id: '1',
+        content: 'Hello! I\'m the Dive AI Assistant powered by Google Gemini with MCP integration.\n\nI can help you with various tasks. You can also connect MCP servers from the "MCP Servers" tab to give me access to additional tools and capabilities.\n\nHow can I help you today?',
+        role: 'assistant',
+        timestamp: new Date(),
+      },
+    ];
+  });
+
   const [isLoading, setIsLoading] = useState(false);
   const [connectedTools, setConnectedTools] = useState<string[]>([]);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('dive-chat-history', JSON.stringify(messages));
+  }, [messages]);
 
   // Monitor MCP server connections and update Gemini tools
   useEffect(() => {
@@ -96,7 +136,7 @@ function App() {
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === aiMessageId
-              ? { ...msg, content: `🔧 **Reading file:** \`${filePath}\`\n\n` }
+              ? { ...msg, content: `<div class="loading-indicator">🔧 **Reading file:** \`${filePath}\`<span class="loading-dots">...</span></div>` }
               : msg
           )
         );
@@ -107,10 +147,22 @@ function App() {
           console.log('[App] File read result:', result);
 
           if (result && typeof result === 'object' && 'content' in result) {
+            const fileContent = result.content as string;
+            const lineCount = fileContent.split('\n').length;
+            const charCount = fileContent.length;
+
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === aiMessageId
-                  ? { ...msg, content: `✅ **File Content:**\n\n${result.content}\n\n---\n**Path:** ${filePath}` }
+                  ? {
+                      ...msg,
+                      content: `I successfully read the file **${filePath.split('/').pop()}**.\n\n` +
+                               `📄 **File Details:**\n` +
+                               `- Lines: ${lineCount}\n` +
+                               `- Characters: ${charCount}\n\n` +
+                               `**Content:**\n\`\`\`\n${fileContent}\n\`\`\`\n\n` +
+                               `*Full path: ${filePath}*`
+                    }
                   : msg
               )
             );
@@ -125,10 +177,11 @@ function App() {
           }
         } catch (error) {
           console.error('[App] Tool error:', error);
+          const errorMsg = formatError(error);
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === aiMessageId
-                ? { ...msg, content: `❌ **Error:** ${error}` }
+                ? { ...msg, content: `❌ **Error reading file**\n\n${errorMsg}\n\n**Path:** ${filePath}\n\n*Tip: Make sure the file path is correct and the file exists.*` }
                 : msg
             )
           );
@@ -146,7 +199,7 @@ function App() {
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === aiMessageId
-              ? { ...msg, content: `🔧 **Listing directory:** ${dirPath}\n\n` }
+              ? { ...msg, content: `<div class="loading-indicator">🔧 **Listing directory:** ${dirPath}<span class="loading-dots">...</span></div>` }
               : msg
           )
         );
@@ -157,13 +210,20 @@ function App() {
 
           // Format the file list nicely
           if (result && typeof result === 'object' && 'files' in result && Array.isArray(result.files)) {
-            const fileList = result.files.map((file, index) => `${index + 1}. ${file}`).join('\n');
-            const fileCount = result.files.length;
+            const files = result.files as string[];
+            const fileCount = files.length;
+            const fileList = files.map((file, index) => `${index + 1}. ${file}`).join('\n');
+            const dirName = dirPath.split('/').pop() || dirPath;
 
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === aiMessageId
-                  ? { ...msg, content: `✅ **Directory Contents:** (${fileCount} items)\n\n${fileList}\n\n---\n**Path:** ${dirPath}` }
+                  ? {
+                      ...msg,
+                      content: `I found **${fileCount} items** in the directory **${dirName}**.\n\n` +
+                               `📁 **Directory Listing:**\n\n${fileList}\n\n` +
+                               `*Full path: ${dirPath}*`
+                    }
                   : msg
               )
             );
@@ -178,10 +238,11 @@ function App() {
           }
         } catch (error) {
           console.error('[App] Tool error:', error);
+          const errorMsg = formatError(error);
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === aiMessageId
-                ? { ...msg, content: `❌ **Error:** ${error}` }
+                ? { ...msg, content: `❌ **Error listing directory**\n\n${errorMsg}\n\n**Path:** ${dirPath}\n\n*Tip: Make sure the directory path is correct and accessible.*` }
                 : msg
             )
           );
@@ -229,6 +290,18 @@ function App() {
     }
   };
 
+  const handleClearChat = () => {
+    console.log('[App] Clear chat clicked');
+    setMessages([
+      {
+        id: Date.now().toString(),
+        content: 'Chat history cleared. How can I help you today?',
+        role: 'assistant',
+        timestamp: new Date(),
+      },
+    ]);
+  };
+
   return (
     <div className="app">
       <header className="app-header">
@@ -261,7 +334,7 @@ function App() {
               </div>
             )}
             <MessageList messages={messages} />
-            <ChatInput onSend={handleSendMessage} disabled={isLoading} />
+            <ChatInput onSend={handleSendMessage} onClear={handleClearChat} disabled={isLoading} />
           </div>
         ) : (
           <MCPServers />
