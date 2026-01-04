@@ -3,6 +3,7 @@ import './App.css'
 import { MessageList } from './components/MessageList'
 import { ChatInput } from './components/ChatInput'
 import { MCPServers } from './components/MCPServers'
+import { Sidebar } from './components/Sidebar'
 import { geminiService } from './services/gemini'
 import { mcpService } from './services/mcp'
 
@@ -10,6 +11,13 @@ interface Message {
   id: string;
   content: string;
   role: 'user' | 'assistant';
+  timestamp: Date;
+}
+
+interface Conversation {
+  id: string;
+  title: string;
+  messages: Message[];
   timestamp: Date;
 }
 
@@ -34,39 +42,67 @@ function formatError(error: unknown): string {
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('chat');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Load messages from localStorage or use default
-  const [messages, setMessages] = useState<Message[]>(() => {
-    const saved = localStorage.getItem('dive-chat-history');
+  // Load conversations from localStorage or create default
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
+    const saved = localStorage.getItem('axen-conversations');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Convert timestamp strings back to Date objects
-        return parsed.map((msg: Message) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp)
+        return parsed.map((conv: Conversation) => ({
+          ...conv,
+          timestamp: new Date(conv.timestamp),
+          messages: conv.messages.map((msg: Message) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }))
         }));
       } catch (e) {
-        console.error('Failed to parse saved messages:', e);
+        console.error('Failed to parse saved conversations:', e);
       }
     }
-    return [
-      {
-        id: '1',
-        content: 'Hello! I\'m the Axen AI Assistant powered by Google Gemini with MCP integration.\n\nI can help you with various tasks. You can also connect MCP servers from the "MCP Servers" tab to give me access to additional tools and capabilities.\n\nHow can I help you today?',
-        role: 'assistant',
-        timestamp: new Date(),
-      },
-    ];
+    // Create default conversation
+    const defaultConv: Conversation = {
+      id: Date.now().toString(),
+      title: 'New chat',
+      timestamp: new Date(),
+      messages: [
+        {
+          id: '1',
+          content: 'Hello! I\'m the Axen AI Assistant powered by Google Gemini with MCP integration.\n\nI can help you with various tasks. You can also connect MCP servers from the "MCP Servers" settings to give me access to additional tools and capabilities.\n\nHow can I help you today?',
+          role: 'assistant',
+          timestamp: new Date(),
+        },
+      ]
+    };
+    return [defaultConv];
   });
+
+  const [currentConversationId, setCurrentConversationId] = useState<string>(() => {
+    const saved = localStorage.getItem('axen-conversations');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed[0]?.id || Date.now().toString();
+      } catch {
+        return Date.now().toString();
+      }
+    }
+    return Date.now().toString();
+  });
+
+  // Get current conversation
+  const currentConversation = conversations.find(c => c.id === currentConversationId) || conversations[0];
+  const messages = currentConversation?.messages || [];
 
   const [isLoading, setIsLoading] = useState(false);
   const [connectedTools, setConnectedTools] = useState<string[]>([]);
 
-  // Save messages to localStorage whenever they change
+  // Save conversations to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('dive-chat-history', JSON.stringify(messages));
-  }, [messages]);
+    localStorage.setItem('axen-conversations', JSON.stringify(conversations));
+  }, [conversations]);
 
   // Monitor MCP server connections and update Gemini tools
   useEffect(() => {
@@ -103,6 +139,19 @@ function App() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+
+    // Update conversation title if it's the first user message
+    if (currentConversation && currentConversation.messages.length === 1) {
+      const title = content.length > 50 ? content.substring(0, 50) + '...' : content;
+      setConversations(prevConvs =>
+        prevConvs.map(conv =>
+          conv.id === currentConversationId
+            ? { ...conv, title }
+            : conv
+        )
+      );
+    }
+
     setIsLoading(true);
 
     // Create empty AI message for streaming
@@ -324,9 +373,48 @@ function App() {
     }
   };
 
+  // Helper function to update messages in current conversation
+  const setMessages = (updater: (prev: Message[]) => Message[]) => {
+    setConversations(prevConvs =>
+      prevConvs.map(conv =>
+        conv.id === currentConversationId
+          ? { ...conv, messages: updater(conv.messages) }
+          : conv
+      )
+    );
+  };
+
+  const handleNewChat = () => {
+    const newConv: Conversation = {
+      id: Date.now().toString(),
+      title: 'New chat',
+      timestamp: new Date(),
+      messages: [
+        {
+          id: '1',
+          content: 'Hello! How can I help you today?',
+          role: 'assistant',
+          timestamp: new Date(),
+        },
+      ]
+    };
+    setConversations(prev => [newConv, ...prev]);
+    setCurrentConversationId(newConv.id);
+    setCurrentView('chat');
+  };
+
+  const handleSelectConversation = (id: string) => {
+    setCurrentConversationId(id);
+    setCurrentView('chat');
+  };
+
+  const handleShowSettings = () => {
+    setCurrentView('servers');
+  };
+
   const handleClearChat = () => {
     console.log('[App] Clear chat clicked');
-    setMessages([
+    setMessages(() => [
       {
         id: Date.now().toString(),
         content: 'Chat history cleared. How can I help you today?',
@@ -338,27 +426,24 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="app-header-left">
-          <h1>Axen</h1>
-          <span className="subtitle">AI Agent Platform</span>
-        </div>
-
-        <nav className="app-nav">
-          <button
-            className={`nav-button ${currentView === 'chat' ? 'active' : ''}`}
-            onClick={() => setCurrentView('chat')}
-          >
-            Chat
-          </button>
-          <button
-            className={`nav-button ${currentView === 'servers' ? 'active' : ''}`}
-            onClick={() => setCurrentView('servers')}
-          >
-            MCP Servers
-          </button>
-        </nav>
-      </header>
+      {sidebarCollapsed && (
+        <button
+          className="sidebar-toggle-collapsed"
+          onClick={() => setSidebarCollapsed(false)}
+          title="Show sidebar"
+        >
+          ☰
+        </button>
+      )}
+      <Sidebar
+        conversations={conversations}
+        currentConversationId={currentConversationId}
+        onNewChat={handleNewChat}
+        onSelectConversation={handleSelectConversation}
+        onShowSettings={handleShowSettings}
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
       <main className="app-main">
         {currentView === 'chat' ? (
           <div className="chat-container">
@@ -371,7 +456,14 @@ function App() {
             <ChatInput onSend={handleSendMessage} onClear={handleClearChat} disabled={isLoading} />
           </div>
         ) : (
-          <MCPServers />
+          <div className="settings-view">
+            <div className="settings-header">
+              <h2>MCP Servers</h2>
+            </div>
+            <div className="settings-content">
+              <MCPServers />
+            </div>
+          </div>
         )}
       </main>
     </div>
