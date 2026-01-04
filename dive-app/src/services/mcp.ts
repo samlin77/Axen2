@@ -92,7 +92,14 @@ export class MCPService {
     server.status = 'connecting';
 
     try {
-      const { invoke } = await import('@tauri-apps/api/core');
+      // Try to import and use Tauri invoke
+      let invoke;
+      try {
+        const tauriCore = await import('@tauri-apps/api/core');
+        invoke = tauriCore.invoke;
+      } catch (importError) {
+        throw new Error('MCP servers require running the Tauri desktop app. Please run "npm run tauri:dev" instead of "npm run dev".');
+      }
 
       const result = await invoke('connect_mcp_server', {
         serverId: serverId,
