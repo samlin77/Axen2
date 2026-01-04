@@ -53,7 +53,7 @@ function App() {
     return [
       {
         id: '1',
-        content: 'Hello! I\'m the Dive AI Assistant powered by Google Gemini with MCP integration.\n\nI can help you with various tasks. You can also connect MCP servers from the "MCP Servers" tab to give me access to additional tools and capabilities.\n\nHow can I help you today?',
+        content: 'Hello! I\'m the Axen AI Assistant powered by Google Gemini with MCP integration.\n\nI can help you with various tasks. You can also connect MCP servers from the "MCP Servers" tab to give me access to additional tools and capabilities.\n\nHow can I help you today?',
         role: 'assistant',
         timestamp: new Date(),
       },
@@ -123,12 +123,34 @@ function App() {
       const readFileMatch = content.match(/read (?:the )?files? (.+)/i);
       const listDirMatch = content.match(/list (?:files? )?(?:in |under |from )?(.+)/i);
 
+      // Check if user is asking for file operations but MCP is not connected
+      if ((readFileMatch || listDirMatch) && connectedTools.length === 0) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === aiMessageId
+              ? {
+                  ...msg,
+                  content: `⚠️ **MCP Server Not Connected**\n\n` +
+                           `I detected that you want to access files, but no MCP servers are currently connected.\n\n` +
+                           `**To enable file access:**\n` +
+                           `1. Go to the **MCP Servers** tab\n` +
+                           `2. Click **Connect** on the Filesystem Server\n` +
+                           `3. Come back to Chat and try again\n\n` +
+                           `*Note: File operations require MCP server permissions.*`
+                }
+              : msg
+          )
+        );
+        setIsLoading(false);
+        return;
+      }
+
       if (readFileMatch && connectedTools.length > 0) {
         // User wants to read a file - call tool directly
         let filePath = readFileMatch[1].trim();
 
-        // Remove quotes if present
-        filePath = filePath.replace(/^["']|["']$/g, '');
+        // Remove quotes, backticks if present
+        filePath = filePath.replace(/^["'`]|["'`]$/g, '');
 
         console.log('[App] Detected file read request. Original:', readFileMatch[1]);
         console.log('[App] Cleaned path:', filePath);
@@ -145,6 +167,11 @@ function App() {
           console.log('[App] Calling MCP tool with args:', { path: filePath });
           const result = await mcpService.callTool('filesystem', 'read_file', { path: filePath });
           console.log('[App] File read result:', result);
+
+          // Check if the result indicates an error
+          if (result && typeof result === 'object' && 'success' in result && !result.success) {
+            throw new Error((result as any).error || 'Unknown error occurred');
+          }
 
           if (result && typeof result === 'object' && 'content' in result) {
             const fileContent = result.content as string;
@@ -177,11 +204,12 @@ function App() {
           }
         } catch (error) {
           console.error('[App] Tool error:', error);
-          const errorMsg = formatError(error);
+          const errorMsg = error instanceof Error ? error.message : String(error);
+
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === aiMessageId
-                ? { ...msg, content: `❌ **Error reading file**\n\n${errorMsg}\n\n**Path:** ${filePath}\n\n*Tip: Make sure the file path is correct and the file exists.*` }
+                ? { ...msg, content: `❌ **Error reading file**\n\n${errorMsg}\n\n**Path:** \`${filePath}\`\n\n*Tip: Make sure the file path is correct and the file exists.*` }
                 : msg
             )
           );
@@ -189,8 +217,8 @@ function App() {
       } else if (listDirMatch && connectedTools.length > 0) {
         // User wants to list directory
         let dirPath = listDirMatch[1].trim();
-        // Remove quotes if present
-        dirPath = dirPath.replace(/^["']|["']$/g, '');
+        // Remove quotes, backticks if present
+        dirPath = dirPath.replace(/^["'`]|["'`]$/g, '');
         // Remove trailing slash
         dirPath = dirPath.replace(/\/$/, '');
         console.log('[App] Detected directory list request. Original:', listDirMatch[1]);
@@ -207,6 +235,11 @@ function App() {
         try {
           const result = await mcpService.callTool('filesystem', 'list_directory', { path: dirPath });
           console.log('[App] Directory list result:', result);
+
+          // Check if the result indicates an error
+          if (result && typeof result === 'object' && 'success' in result && !result.success) {
+            throw new Error((result as any).error || 'Unknown error occurred');
+          }
 
           // Format the file list nicely
           if (result && typeof result === 'object' && 'files' in result && Array.isArray(result.files)) {
@@ -238,11 +271,12 @@ function App() {
           }
         } catch (error) {
           console.error('[App] Tool error:', error);
-          const errorMsg = formatError(error);
+          const errorMsg = error instanceof Error ? error.message : String(error);
+
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === aiMessageId
-                ? { ...msg, content: `❌ **Error listing directory**\n\n${errorMsg}\n\n**Path:** ${dirPath}\n\n*Tip: Make sure the directory path is correct and accessible.*` }
+                ? { ...msg, content: `❌ **Error listing directory**\n\n${errorMsg}\n\n**Path:** \`${dirPath}\`\n\n*Tip: Make sure the directory path is correct and accessible.*` }
                 : msg
             )
           );
@@ -306,7 +340,7 @@ function App() {
     <div className="app">
       <header className="app-header">
         <div className="app-header-left">
-          <h1>Dive</h1>
+          <h1>Axen</h1>
           <span className="subtitle">AI Agent Platform</span>
         </div>
 
