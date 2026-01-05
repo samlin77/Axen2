@@ -7,9 +7,11 @@ import { ErrorBoundary } from './ErrorBoundary';
 export function MCPServers() {
   const [servers, setServers] = useState<MCPServerInstance[]>([]);
   const [showToolTester, setShowToolTester] = useState(false);
+  const [isLoadingBulk, setIsLoadingBulk] = useState(false);
 
   useEffect(() => {
-    // Load servers on component mount
+    // Load saved configurations and servers on component mount
+    mcpService.loadConfigurations();
     setServers(mcpService.getServers());
   }, []);
 
@@ -30,6 +32,47 @@ export function MCPServers() {
     } catch (error) {
       console.error('Failed to disconnect:', error);
     }
+  };
+
+  const handleConnectAll = async () => {
+    setIsLoadingBulk(true);
+    try {
+      const allServerIds = servers.map(s => s.config.id);
+      await mcpService.connectMultiple(allServerIds);
+      setServers(mcpService.getServers());
+    } catch (error) {
+      console.error('Failed to connect all servers:', error);
+    } finally {
+      setIsLoadingBulk(false);
+    }
+  };
+
+  const handleDisconnectAll = async () => {
+    setIsLoadingBulk(true);
+    try {
+      await mcpService.disconnectAll();
+      setServers(mcpService.getServers());
+    } catch (error) {
+      console.error('Failed to disconnect all servers:', error);
+    } finally {
+      setIsLoadingBulk(false);
+    }
+  };
+
+  const handleHealthCheckAll = async () => {
+    setIsLoadingBulk(true);
+    try {
+      await mcpService.healthCheckAll();
+      setServers(mcpService.getServers());
+    } catch (error) {
+      console.error('Failed to health check servers:', error);
+    } finally {
+      setIsLoadingBulk(false);
+    }
+  };
+
+  const handleSaveConfigs = () => {
+    mcpService.saveConfigurations();
   };
 
   const getStatusColor = (status: string) => {
@@ -58,6 +101,9 @@ export function MCPServers() {
     }
   };
 
+  const connectedCount = servers.filter(s => s.status === 'connected').length;
+  const hasServers = servers.length > 0;
+
   return (
     <div className="mcp-servers">
       <div className="mcp-servers-header">
@@ -65,6 +111,38 @@ export function MCPServers() {
         <p className="mcp-servers-subtitle">
           Model Context Protocol servers provide tools and resources for the AI
         </p>
+
+        <div className="mcp-bulk-actions">
+          <button
+            className="mcp-button mcp-button-primary"
+            onClick={handleConnectAll}
+            disabled={isLoadingBulk || !hasServers || connectedCount === servers.length}
+          >
+            {isLoadingBulk ? 'Connecting...' : 'Connect All'}
+          </button>
+          <button
+            className="mcp-button mcp-button-secondary"
+            onClick={handleDisconnectAll}
+            disabled={isLoadingBulk || connectedCount === 0}
+          >
+            {isLoadingBulk ? 'Disconnecting...' : 'Disconnect All'}
+          </button>
+          <button
+            className="mcp-button mcp-button-secondary"
+            onClick={handleHealthCheckAll}
+            disabled={isLoadingBulk || connectedCount === 0}
+          >
+            Health Check
+          </button>
+          <button
+            className="mcp-button mcp-button-secondary"
+            onClick={handleSaveConfigs}
+            disabled={!hasServers}
+          >
+            Save Configs
+          </button>
+        </div>
+
         <button
           className="tool-tester-toggle"
           onClick={() => setShowToolTester(!showToolTester)}

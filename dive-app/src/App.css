@@ -460,6 +460,33 @@
   font-size: 0.95rem;
 }
 
+.mcp-bulk-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.mcp-button-primary {
+  background: #6fa372;
+  color: white;
+  border-color: #6fa372;
+}
+
+.mcp-button-primary:hover:not(:disabled) {
+  background: #5e8c61;
+}
+
+.mcp-button-secondary {
+  background: #a67c52;
+  color: white;
+  border-color: #a67c52;
+}
+
+.mcp-button-secondary:hover:not(:disabled) {
+  background: #8d6845;
+}
+
 .mcp-servers-list {
   display: flex;
   flex-direction: column;

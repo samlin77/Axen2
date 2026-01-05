@@ -241,6 +241,142 @@ export class MCPService {
     // TODO: Implement actual resource reading via MCP protocol
     throw new Error('Resource reading not yet implemented in MVP-4');
   }
+
+  /**
+   * Connect to multiple MCP servers in parallel
+   */
+  async connectMultiple(serverIds: string[]): Promise<void> {
+    console.log(`Connecting to ${serverIds.length} MCP servers in parallel...`);
+
+    const connectionPromises = serverIds.map(serverId =>
+      this.connectServer(serverId).catch(error => {
+        console.error(`Failed to connect to server ${serverId}:`, error);
+        // Don't throw - allow other connections to continue
+        return null;
+      })
+    );
+
+    await Promise.all(connectionPromises);
+
+    const connectedCount = this.getServers().filter(s => s.status === 'connected').length;
+    console.log(`Successfully connected to ${connectedCount}/${serverIds.length} servers`);
+  }
+
+  /**
+   * Disconnect from all connected MCP servers
+   */
+  async disconnectAll(): Promise<void> {
+    const connectedServers = Array.from(this.servers.entries())
+      .filter(([, server]) => server.status === 'connected')
+      .map(([serverId]) => serverId);
+
+    if (connectedServers.length === 0) {
+      console.log('No connected servers to disconnect');
+      return;
+    }
+
+    console.log(`Disconnecting from ${connectedServers.length} servers...`);
+
+    const disconnectionPromises = connectedServers.map(serverId =>
+      this.disconnectServer(serverId).catch(error => {
+        console.error(`Failed to disconnect from server ${serverId}:`, error);
+        return null;
+      })
+    );
+
+    await Promise.all(disconnectionPromises);
+    console.log('All servers disconnected');
+  }
+
+  /**
+   * Perform health check on a specific server
+   */
+  async healthCheck(serverId: string): Promise<boolean> {
+    const server = this.servers.get(serverId);
+    if (!server) {
+      console.warn(`Server ${serverId} not found`);
+      return false;
+    }
+
+    if (server.status !== 'connected') {
+      return false;
+    }
+
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const result = await invoke('mcp_health_check', { serverId });
+      return result as boolean;
+    } catch (error) {
+      console.error(`Health check failed for server ${serverId}:`, error);
+      // Update server status if health check fails
+      server.status = 'error';
+      server.error = 'Health check failed';
+      return false;
+    }
+  }
+
+  /**
+   * Perform health check on all connected servers
+   */
+  async healthCheckAll(): Promise<Map<string, boolean>> {
+    const connectedServers = Array.from(this.servers.entries())
+      .filter(([, server]) => server.status === 'connected')
+      .map(([serverId]) => serverId);
+
+    const results = new Map<string, boolean>();
+
+    const healthChecks = connectedServers.map(async serverId => {
+      const isHealthy = await this.healthCheck(serverId);
+      results.set(serverId, isHealthy);
+    });
+
+    await Promise.all(healthChecks);
+
+    const healthyCount = Array.from(results.values()).filter(v => v).length;
+    console.log(`Health check complete: ${healthyCount}/${results.size} servers healthy`);
+
+    return results;
+  }
+
+  /**
+   * Save server configurations to localStorage
+   */
+  saveConfigurations(): void {
+    const configs = Array.from(this.servers.values()).map(server => server.config);
+
+    try {
+      localStorage.setItem('axen-mcp-configs', JSON.stringify(configs));
+      console.log(`Saved ${configs.length} MCP server configurations`);
+    } catch (error) {
+      console.error('Failed to save MCP configurations:', error);
+    }
+  }
+
+  /**
+   * Load server configurations from localStorage
+   */
+  loadConfigurations(): void {
+    try {
+      const saved = localStorage.getItem('axen-mcp-configs');
+      if (!saved) {
+        console.log('No saved MCP configurations found');
+        return;
+      }
+
+      const configs = JSON.parse(saved) as MCPServerConfig[];
+      console.log(`Loading ${configs.length} MCP server configurations...`);
+
+      // Clear existing servers (except those already registered)
+      this.servers.clear();
+
+      // Re-register all saved configurations
+      configs.forEach(config => this.registerServer(config));
+
+      console.log(`Loaded ${configs.length} MCP server configurations`);
+    } catch (error) {
+      console.error('Failed to load MCP configurations:', error);
+    }
+  }
 }
 
 // Export a singleton instance
@@ -263,5 +399,66 @@ mcpService.registerServer({
   args: ['-y', '@modelcontextprotocol/server-github'],
   env: {
     GITHUB_PERSONAL_ACCESS_TOKEN: import.meta.env.VITE_GITHUB_TOKEN || '',
+  },
+});
+
+// Google Workspace MCP Servers
+mcpService.registerServer({
+  id: 'google-calendar',
+  name: 'Google Calendar',
+  description: 'Manage Google Calendar events, scheduling, and availability',
+  command: 'uvx',
+  args: ['workspace-mcp', '--tools', 'calendar'],
+  env: {
+    GOOGLE_OAUTH_CLIENT_ID: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || '',
+    GOOGLE_OAUTH_CLIENT_SECRET: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET || '',
+  },
+});
+
+mcpService.registerServer({
+  id: 'google-gmail',
+  name: 'Gmail',
+  description: 'Search, send, and organize Gmail messages',
+  command: 'uvx',
+  args: ['workspace-mcp', '--tools', 'gmail'],
+  env: {
+    GOOGLE_OAUTH_CLIENT_ID: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || '',
+    GOOGLE_OAUTH_CLIENT_SECRET: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET || '',
+  },
+});
+
+mcpService.registerServer({
+  id: 'google-drive',
+  name: 'Google Drive',
+  description: 'Upload, download, search, and manage Google Drive files',
+  command: 'uvx',
+  args: ['workspace-mcp', '--tools', 'drive'],
+  env: {
+    GOOGLE_OAUTH_CLIENT_ID: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || '',
+    GOOGLE_OAUTH_CLIENT_SECRET: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET || '',
+  },
+});
+
+mcpService.registerServer({
+  id: 'google-docs',
+  name: 'Google Docs',
+  description: 'Create, read, and edit Google Docs documents',
+  command: 'uvx',
+  args: ['workspace-mcp', '--tools', 'docs'],
+  env: {
+    GOOGLE_OAUTH_CLIENT_ID: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || '',
+    GOOGLE_OAUTH_CLIENT_SECRET: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET || '',
+  },
+});
+
+mcpService.registerServer({
+  id: 'google-sheets',
+  name: 'Google Sheets',
+  description: 'Create, read, and edit Google Sheets spreadsheets',
+  command: 'uvx',
+  args: ['workspace-mcp', '--tools', 'sheets'],
+  env: {
+    GOOGLE_OAUTH_CLIENT_ID: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || '',
+    GOOGLE_OAUTH_CLIENT_SECRET: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET || '',
   },
 });

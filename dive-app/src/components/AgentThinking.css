@@ -1,0 +1,279 @@
+.agent-thinking {
+  background: #ffffff;
+  border: 2px solid #dbd0ba;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+}
+
+/* Task Header */
+.agent-task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f5f1e6;
+}
+
+.agent-task-info {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  flex: 1;
+}
+
+.agent-status-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.agent-task-details {
+  flex: 1;
+}
+
+.agent-task-goal {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4a3f35;
+}
+
+.agent-task-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: #7d6b56;
+}
+
+.agent-task-status {
+  font-weight: 600;
+}
+
+.agent-task-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.agent-control-button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #dbd0ba;
+  background: #a67c52;
+  color: white;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.agent-control-button:hover {
+  background: #8d6845;
+}
+
+.agent-control-cancel {
+  background: #b54a35;
+  border-color: #b54a35;
+}
+
+.agent-control-cancel:hover {
+  background: #9d3f2e;
+}
+
+/* Error Display */
+.agent-error {
+  padding: 0.75rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #991b1b;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+/* Steps Timeline */
+.agent-steps-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.agent-step {
+  background: #fffcf5;
+  border: 1px solid #dbd0ba;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.agent-step.expanded {
+  border-color: #a67c52;
+  box-shadow: 0 2px 4px rgba(166, 124, 82, 0.1);
+}
+
+.agent-step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: #fffcf5;
+  transition: background 0.2s;
+}
+
+.agent-step-header:hover {
+  background: #f5f1e6;
+}
+
+.agent-step.expanded .agent-step-header {
+  background: #f5f1e6;
+  border-bottom: 1px solid #dbd0ba;
+}
+
+.agent-step-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.agent-step-number {
+  font-weight: 600;
+  color: #a67c52;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.agent-step-thought-preview {
+  color: #5c4d3f;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-step-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.agent-step-time {
+  font-size: 0.75rem;
+  color: #9d8a6f;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.agent-step-expand-icon {
+  color: #a67c52;
+  font-size: 0.75rem;
+}
+
+/* Step Details */
+.agent-step-details {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.agent-step-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.agent-step-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #7d6b56;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.agent-step-content {
+  padding: 0.75rem;
+  background: #ffffff;
+  border: 1px solid #e8dfc8;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #4a3f35;
+  line-height: 1.5;
+}
+
+.agent-action-type {
+  font-weight: 600;
+  color: #a67c52;
+  margin-bottom: 0.25rem;
+}
+
+.agent-action-details {
+  color: #7d6b56;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.agent-action-args,
+.agent-observation-result {
+  margin: 0;
+  padding: 0.75rem;
+  background: #f5f1e6;
+  border: 1px solid #dbd0ba;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.8rem;
+  overflow-x: auto;
+  color: #5c4d3f;
+}
+
+.agent-observation-error {
+  color: #b54a35;
+  font-weight: 500;
+}
+
+.agent-observation-empty {
+  color: #9d8a6f;
+  font-style: italic;
+}
+
+/* Progress Indicator */
+.agent-progress {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #f5f1e6;
+}
+
+.agent-progress-bar {
+  height: 6px;
+  background: #f5f1e6;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.agent-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a67c52, #d4c8aa);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.agent-progress-text {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #7d6b56;
+  font-weight: 500;
+}
