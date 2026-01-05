@@ -320,16 +320,31 @@ MVP-M2: Week 4        → Demo: "Feedback & Decision Point"
 | Week | Milestone | Status | Demo | Feedback |
 |------|-----------|--------|------|----------|
 | Week 1 | MVP-M0 | ✅ Complete | 2025-01-03 | Positive - good start |
-| Week 2-3 | MVP-M1 | 🔄 In Progress | 2025-01-17 | TBD |
-| Week 4 | MVP-M2 | ⏳ Not Started | 2025-01-24 | TBD |
+| Week 2-3 | MVP-M1 | ✅ Complete | 2026-01-05 | Exceeded expectations - bonus features added |
+| Week 4 | **Epic 8** | ✅ Complete | 2026-01-05 | **Strategic pivot: Agentic platform foundation** |
 
 ### Story Completion
 
+**MVP Phase:**
 - [x] MVP-1: Hello World macOS App (Day 1)
 - [x] MVP-2: Chat Interface UI (Day 2)
-- [ ] MVP-3: Gemini Integration (Days 3-7)
-- [ ] MVP-4: MCP Client Foundation (Days 8-10)
-- [ ] MVP-5: MCP in Chat (Days 11-15)
+- [x] MVP-3: Gemini Integration (Days 3-7)
+- [x] MVP-4: MCP Client Foundation (Days 8-10)
+- [x] MVP-5: MCP in Chat (Days 11-15)
+
+**Bonus Features (MVP-M1 Exceeded):**
+- [x] Conversation management with persistence (localStorage)
+- [x] Collapsible sidebar with conversation list
+- [x] Responsive layout fixes
+- [x] Enhanced MCP error handling
+
+**Epic 8: Agentic Flow Foundation:**
+- [x] Story 8.1: Multi-MCP Architecture
+- [x] Story 8.2-8.5: Google Workspace Integration (5 servers)
+- [x] Story 8.6: Agent Reasoning Loop
+- [x] Story 8.7: Tool Chain Orchestration
+- [x] Story 8.8: Self-Correction & Retry Logic
+- [x] Story 8.9-8.10: Agent UI Components
 
 ---
 

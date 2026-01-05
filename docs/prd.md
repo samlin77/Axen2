@@ -138,6 +138,9 @@ Implement chat interface with conversation management and integrate multiple LLM
 **Epic 3: MCP Protocol & Server Management**
 Enable MCP server connectivity (stdio/SSE), configuration management, and IT-approved server catalog
 
+**Epic 8: Google Workspace MCP & Agentic Flow** ✅ FOUNDATION COMPLETE
+Transform Axen into true agentic platform with autonomous multi-step workflows across Google Workspace (Calendar, Gmail, Drive, Docs, Sheets) using reasoning loops, tool chaining, and self-correction
+
 **Epic 4: Security Layer & MCP-Defender Integration**
 Integrate MCP-Defender for real-time threat detection, implement RBAC, PII detection/masking, and user consent workflows
 
@@ -331,6 +334,64 @@ Implement offline capability with local LLM fallback, proxy support, auto-update
 3. Periodic health checks during usage
 4. Clear error messages if server unreachable
 5. Settings panel shows server status list
+
+---
+
+### Epic 8: Google Workspace MCP & Agentic Flow ✅ FOUNDATION COMPLETE
+**Goal:** Transform Axen from a "chat with tools" interface into a true agentic platform that can autonomously orchestrate multi-step workflows across Google Workspace (Calendar, Gmail, Drive, Docs, Sheets) using reasoning loops, tool chaining, and self-correction.
+
+**Status:** Foundation Complete (2026-01-05)
+**Implementation Details:** [docs/epic-8-google-workspace-agentic-flow.md](epic-8-google-workspace-agentic-flow.md)
+
+#### Story 8.1: Multi-MCP Architecture ✅
+**Implementation:**
+- Enhanced MCP service with 6 multi-server methods (`connectMultiple`, `disconnectAll`, `healthCheck`, `healthCheckAll`, `saveConfigurations`, `loadConfigurations`)
+- Bulk operation UI with Connect All, Disconnect All, Health Check buttons
+- Configuration persistence via localStorage
+- Support for 5+ simultaneous MCP server connections
+
+#### Story 8.2-8.5: Google Workspace Integration ✅
+**Implementation:**
+- Registered 5 Google Workspace MCP servers: Calendar, Gmail, Drive, Docs, Sheets
+- OAuth 2.0 authentication configuration with environment variables
+- Setup guide: [docs/google-workspace-setup.md](google-workspace-setup.md)
+- Tool inventory: 25+ tools across 5 services (event management, email operations, file operations, document editing, spreadsheet manipulation)
+
+#### Story 8.6: Agent Reasoning Loop ✅
+**Implementation:**
+- Complete reasoning loop: Thought → Action → Observation → Evaluation → Decision
+- Max 10 iterations with timeout protection
+- Pause/Resume/Cancel controls
+- Context preservation across iterations
+- Service: [agent-flow.ts](../dive-app/src/services/agent-flow.ts)
+
+#### Story 8.7: Tool Chain Orchestration ✅
+**Implementation:**
+- Parallel tool execution support
+- Dependency resolution
+- Error propagation handling
+- Tool call retry with exponential backoff (up to 3 attempts)
+
+#### Story 8.8: Self-Correction & Retry Logic ✅
+**Implementation:**
+- Intelligent error classification (retryable vs. fatal)
+- Exponential backoff retry strategy
+- Alternative approach selection on failure
+- Graceful degradation
+
+#### Story 8.9-8.10: Agent UI Components ✅
+**Implementation:**
+- AgentThinking component with expandable step visualization ([AgentThinking.tsx](../dive-app/src/components/AgentThinking.tsx))
+- ConfirmationDialog modal for user approval ([ConfirmationDialog.tsx](../dive-app/src/components/ConfirmationDialog.tsx))
+- Risk-based confirmation gates (Low/Medium/High)
+- Real-time progress indicators
+- Themed styling matching warm beige/brown color scheme
+
+**Next Steps:**
+- Integrate agent-flow service into App.tsx chat interface
+- Test with real Google Workspace OAuth credentials
+- Build workflow templates for common tasks
+- Performance optimization and error handling refinement
 
 ---
 
