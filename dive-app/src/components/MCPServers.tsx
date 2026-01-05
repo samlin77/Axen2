@@ -3,11 +3,14 @@ import { mcpService } from '../services/mcp';
 import type { MCPServerInstance } from '../services/mcp';
 import { ToolTester } from './ToolTester';
 import { ErrorBoundary } from './ErrorBoundary';
+import { GoogleOAuthSetup } from './GoogleOAuthSetup';
 
 export function MCPServers() {
   const [servers, setServers] = useState<MCPServerInstance[]>([]);
   const [showToolTester, setShowToolTester] = useState(false);
   const [isLoadingBulk, setIsLoadingBulk] = useState(false);
+  const [showOAuthSetup, setShowOAuthSetup] = useState(false);
+  const [pendingServerId, setPendingServerId] = useState<string | null>(null);
 
   useEffect(() => {
     // Load saved configurations and servers on component mount
@@ -16,6 +19,20 @@ export function MCPServers() {
   }, []);
 
   const handleConnect = async (serverId: string) => {
+    // Check if this is a Google Workspace server
+    const googleServers = ['google-calendar', 'google-gmail', 'google-drive', 'google-docs', 'google-sheets'];
+    const isGoogleServer = googleServers.includes(serverId);
+
+    // Check if OAuth is configured
+    const hasOAuth = localStorage.getItem('google-oauth-client-id') && localStorage.getItem('google-oauth-client-secret');
+
+    if (isGoogleServer && !hasOAuth) {
+      // Show OAuth setup dialog
+      setPendingServerId(serverId);
+      setShowOAuthSetup(true);
+      return;
+    }
+
     try {
       await mcpService.connectServer(serverId);
       setServers(mcpService.getServers());
@@ -23,6 +40,36 @@ export function MCPServers() {
       console.error('Failed to connect:', error);
       setServers(mcpService.getServers());
     }
+  };
+
+  const handleOAuthComplete = async (clientId: string, clientSecret: string) => {
+    // Save OAuth credentials to localStorage
+    localStorage.setItem('google-oauth-client-id', clientId);
+    localStorage.setItem('google-oauth-client-secret', clientSecret);
+
+    // Update environment variables in mcp service
+    // Note: This requires app restart to take effect properly
+    console.log('OAuth credentials saved. Restarting required for full effect.');
+
+    // Close dialog
+    setShowOAuthSetup(false);
+
+    // Try to connect the pending server
+    if (pendingServerId) {
+      try {
+        await mcpService.connectServer(pendingServerId);
+        setServers(mcpService.getServers());
+      } catch (error) {
+        console.error('Failed to connect after OAuth setup:', error);
+        alert('OAuth credentials saved, but connection failed. Please restart the app and try again.');
+      }
+      setPendingServerId(null);
+    }
+  };
+
+  const handleOAuthCancel = () => {
+    setShowOAuthSetup(false);
+    setPendingServerId(null);
   };
 
   const handleDisconnect = async (serverId: string) => {
@@ -228,6 +275,14 @@ export function MCPServers() {
         <div className="mcp-empty-state">
           <p>No MCP servers registered</p>
         </div>
+      )}
+
+      {/* OAuth Setup Dialog */}
+      {showOAuthSetup && (
+        <GoogleOAuthSetup
+          onComplete={handleOAuthComplete}
+          onCancel={handleOAuthCancel}
+        />
       )}
     </div>
   );
