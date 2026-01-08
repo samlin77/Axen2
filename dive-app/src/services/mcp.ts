@@ -79,6 +79,45 @@ export class MCPService {
   }
 
   /**
+   * Check if a server is a Google Workspace server
+   */
+  private isGoogleWorkspaceServer(serverId: string): boolean {
+    return serverId.startsWith('google-');
+  }
+
+  /**
+   * Trigger OAuth flow for Google Workspace services by calling start_google_auth
+   */
+  private async triggerGoogleOAuth(serverId: string): Promise<void> {
+    console.log('🔐 Initiating Google OAuth flow via workspace-mcp...');
+
+    try {
+      // Determine service name based on server ID
+      const serviceMap: Record<string, string> = {
+        'google-calendar': 'calendar',
+        'google-gmail': 'gmail',
+        'google-drive': 'drive',
+        'google-docs': 'docs',
+        'google-sheets': 'sheets',
+      };
+
+      const serviceName = serviceMap[serverId] || 'calendar';
+
+      // Call the start_google_auth tool to initiate OAuth
+      // This will start the MCP server's OAuth callback server and return the auth URL
+      const result = await this.callTool(serverId, 'start_google_auth', {
+        service_name: serviceName,
+        user_google_email: 'samlin77@gmail.com', // Default email for OAuth setup
+      });
+
+      console.log('✅ OAuth flow initiated successfully');
+    } catch (error) {
+      console.error('❌ Failed to initiate OAuth flow:', error);
+      // Don't throw - connection can still proceed, OAuth will be triggered on first tool use
+    }
+  }
+
+  /**
    * Connect to an MCP server using Tauri backend
    */
   async connectServer(serverId: string): Promise<void> {
@@ -117,6 +156,15 @@ export class MCPService {
       server.status = 'connected';
       server.tools = (result as any).tools || [];
       server.resources = [];
+
+      // Auto-trigger OAuth for Google Workspace servers after successful connection
+      if (this.isGoogleWorkspaceServer(serverId)) {
+        console.log('🔍 Detected Google Workspace server, initiating OAuth...');
+        // Don't await - let it run in background
+        this.triggerGoogleOAuth(serverId).catch(err => {
+          console.error('OAuth trigger failed:', err);
+        });
+      }
 
     } catch (error) {
       console.error('Failed to connect to MCP server:', error);
@@ -214,10 +262,52 @@ export class MCPService {
         args,
       });
 
+      console.log('[MCP Service] Tool call completed, checking for OAuth URL...');
+      // Auto-detect and open OAuth authorization URLs
+      try {
+        await this.detectAndOpenOAuthUrl(result);
+      } catch (detectionError) {
+        console.error('[MCP Service] OAuth detection failed:', detectionError);
+      }
+
       return result;
     } catch (error) {
       console.error('Failed to call MCP tool:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Detect OAuth URLs in MCP tool responses and automatically open them in the browser
+   */
+  private async detectAndOpenOAuthUrl(result: unknown): Promise<void> {
+    // Check if result contains an OAuth authorization URL
+    const resultStr = JSON.stringify(result);
+    console.log('🔍 Checking for OAuth URL in result:', resultStr.substring(0, 200));
+
+    // More flexible regex that handles escaped characters in JSON
+    const urlMatch = resultStr.match(/https:\/\/accounts\.google\.com\/o\/oauth2\/auth\?[^"\\]+/);
+
+    if (urlMatch) {
+      // Decode any JSON escape sequences
+      let authUrl = urlMatch[0];
+      authUrl = authUrl.replace(/\\u([0-9a-fA-F]{4})/g, (_, code) => String.fromCharCode(parseInt(code, 16)));
+      authUrl = authUrl.replace(/\\(.)/g, '$1'); // Remove backslashes before other characters
+
+      console.log('🔗 Detected OAuth authorization URL, opening browser:', authUrl);
+
+      try {
+        // Use Tauri's shell open API
+        const { open } = await import('@tauri-apps/plugin-shell');
+        await open(authUrl);
+        console.log('✅ OAuth browser window opened successfully');
+      } catch (error) {
+        console.error('❌ Failed to open OAuth URL in browser:', error);
+        console.log('Please manually open this URL:', authUrl);
+        // Don't throw - this is a convenience feature, not critical
+      }
+    } else {
+      console.log('❌ No OAuth URL detected in result');
     }
   }
 
@@ -403,16 +493,13 @@ mcpService.registerServer({
 });
 
 // Google Workspace MCP Servers
+// OAuth credentials are loaded from .env by the Rust backend
 mcpService.registerServer({
   id: 'google-calendar',
   name: 'Google Calendar',
   description: 'Manage Google Calendar events, scheduling, and availability',
   command: 'uvx',
   args: ['workspace-mcp', '--tools', 'calendar'],
-  env: {
-    GOOGLE_OAUTH_CLIENT_ID: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || '',
-    GOOGLE_OAUTH_CLIENT_SECRET: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET || '',
-  },
 });
 
 mcpService.registerServer({
@@ -421,10 +508,6 @@ mcpService.registerServer({
   description: 'Search, send, and organize Gmail messages',
   command: 'uvx',
   args: ['workspace-mcp', '--tools', 'gmail'],
-  env: {
-    GOOGLE_OAUTH_CLIENT_ID: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || '',
-    GOOGLE_OAUTH_CLIENT_SECRET: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET || '',
-  },
 });
 
 mcpService.registerServer({
@@ -433,10 +516,6 @@ mcpService.registerServer({
   description: 'Upload, download, search, and manage Google Drive files',
   command: 'uvx',
   args: ['workspace-mcp', '--tools', 'drive'],
-  env: {
-    GOOGLE_OAUTH_CLIENT_ID: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || '',
-    GOOGLE_OAUTH_CLIENT_SECRET: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET || '',
-  },
 });
 
 mcpService.registerServer({
@@ -445,10 +524,6 @@ mcpService.registerServer({
   description: 'Create, read, and edit Google Docs documents',
   command: 'uvx',
   args: ['workspace-mcp', '--tools', 'docs'],
-  env: {
-    GOOGLE_OAUTH_CLIENT_ID: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || '',
-    GOOGLE_OAUTH_CLIENT_SECRET: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET || '',
-  },
 });
 
 mcpService.registerServer({
@@ -457,8 +532,4 @@ mcpService.registerServer({
   description: 'Create, read, and edit Google Sheets spreadsheets',
   command: 'uvx',
   args: ['workspace-mcp', '--tools', 'sheets'],
-  env: {
-    GOOGLE_OAUTH_CLIENT_ID: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || '',
-    GOOGLE_OAUTH_CLIENT_SECRET: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET || '',
-  },
 });
