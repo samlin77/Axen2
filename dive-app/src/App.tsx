@@ -4,8 +4,17 @@ import { MessageList } from './components/MessageList'
 import { ChatInput } from './components/ChatInput'
 import { MCPServers } from './components/MCPServers'
 import { Sidebar } from './components/Sidebar'
+import { AgentThinking } from './components/AgentThinking'
+import { ConfirmationDialog } from './components/ConfirmationDialog'
 import { geminiService } from './services/gemini'
 import { mcpService } from './services/mcp'
+import type { AgentTask, ConfirmationGate } from './services/agent-flow'
+import { testOAuthOpen } from './test-oauth-open'
+
+// Expose test function to browser console
+if (typeof window !== 'undefined') {
+  (window as any).testOAuthOpen = testOAuthOpen;
+}
 
 interface Message {
   id: string;
@@ -22,23 +31,6 @@ interface Conversation {
 }
 
 type View = 'chat' | 'servers';
-
-// Helper function to format errors
-function formatError(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (typeof error === 'string') {
-    return error;
-  }
-  if (typeof error === 'object' && error !== null) {
-    if ('error' in error) {
-      return String(error.error);
-    }
-    return JSON.stringify(error);
-  }
-  return 'An unknown error occurred';
-}
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('chat');
@@ -98,6 +90,10 @@ function App() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [connectedTools, setConnectedTools] = useState<string[]>([]);
+
+  // Agent flow state
+  const [currentTask] = useState<AgentTask | null>(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState<ConfirmationGate | null>(null);
 
   // Save conversations to localStorage whenever they change
   useEffect(() => {
@@ -453,6 +449,7 @@ function App() {
               </div>
             )}
             <MessageList messages={messages} />
+            {currentTask && <AgentThinking task={currentTask} />}
             <ChatInput onSend={handleSendMessage} onClear={handleClearChat} disabled={isLoading} />
           </div>
         ) : (
@@ -466,6 +463,18 @@ function App() {
           </div>
         )}
       </main>
+      {pendingConfirmation && (
+        <ConfirmationDialog
+          gate={pendingConfirmation}
+          onApprove={() => {
+            setPendingConfirmation(null);
+            // Confirmation handling will be implemented when we add full agentic flow
+          }}
+          onReject={() => {
+            setPendingConfirmation(null);
+          }}
+        />
+      )}
     </div>
   )
 }

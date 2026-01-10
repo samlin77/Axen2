@@ -112,8 +112,14 @@ export function ToolTester({ servers }: ToolTesterProps) {
                     Object.keys(schema.properties).forEach(key => {
                       const prop = (schema.properties as any)[key];
                       if (prop.type === 'string') {
-                        // Use simple placeholder to avoid special characters
-                        example[key] = `example_${key}`;
+                        // Use user-specific defaults for common parameters
+                        if (key === 'user_google_email') {
+                          example[key] = 'samlin77@gmail.com';
+                        } else if (key === 'service_name') {
+                          example[key] = 'Axen Desktop';
+                        } else {
+                          example[key] = `example_${key}`;
+                        }
                       }
                     });
                   }

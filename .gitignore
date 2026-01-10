@@ -13,6 +13,14 @@ dive-app/src-tauri/target/
 .env.local
 .env.*.local
 
+# OAuth credentials and secrets
+client_secret_*.json
+**/Google Cloud*Service account key/
+
+# Test files
+my_excel.xlsx
+**/test-*.ts
+
 # IDEs
 .vscode/
 .idea/

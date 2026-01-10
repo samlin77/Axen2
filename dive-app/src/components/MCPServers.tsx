@@ -4,6 +4,7 @@ import type { MCPServerInstance } from '../services/mcp';
 import { ToolTester } from './ToolTester';
 import { ErrorBoundary } from './ErrorBoundary';
 import { GoogleOAuthSetup } from './GoogleOAuthSetup';
+import { testOAuthOpen } from '../test-oauth-open';
 
 export function MCPServers() {
   const [servers, setServers] = useState<MCPServerInstance[]>([]);
@@ -195,6 +196,14 @@ export function MCPServers() {
           onClick={() => setShowToolTester(!showToolTester)}
         >
           {showToolTester ? 'Hide Tool Tester' : 'Show Tool Tester'}
+        </button>
+
+        <button
+          className="mcp-button mcp-button-primary"
+          onClick={() => testOAuthOpen()}
+          style={{ marginTop: '10px' }}
+        >
+          🧪 Test Browser Open (OAuth)
         </button>
       </div>
 

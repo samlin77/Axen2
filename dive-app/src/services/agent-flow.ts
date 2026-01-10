@@ -9,7 +9,6 @@
  */
 
 import { mcpService } from './mcp';
-import type { MCPTool } from './mcp';
 
 /**
  * Tool call interface
@@ -81,7 +80,6 @@ export interface ConfirmationGate {
 export class AgentFlowService {
   private tasks: Map<string, AgentTask> = new Map();
   private pausedTasks: Set<string> = new Set();
-  private confirmationCallbacks: Map<string, (approved: boolean) => void> = new Map();
 
   /**
    * Create a new agent task
@@ -377,6 +375,30 @@ export class AgentFlowService {
         this.tasks.delete(taskId);
       }
     }
+  }
+
+  /**
+   * Determine if user request should use agentic flow
+   */
+  async shouldUseAgenticFlow(userMessage: string, availableTools: any[]): Promise<boolean> {
+    // Keywords that suggest multi-step workflow
+    const agenticKeywords = [
+      'schedule',
+      'create event',
+      'send email',
+      'update spreadsheet',
+      'summarize',
+      'find and',
+      'search and',
+      'then',
+      'after that',
+    ];
+
+    const lowerMessage = userMessage.toLowerCase();
+    const hasAgenticKeyword = agenticKeywords.some(keyword => lowerMessage.includes(keyword));
+
+    // Only use agentic flow if we have tools and the message suggests multi-step
+    return availableTools.length > 0 && hasAgenticKeyword;
   }
 }
 
