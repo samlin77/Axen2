@@ -8,6 +8,7 @@ import { AgentThinking } from './components/AgentThinking'
 import { ConfirmationDialog } from './components/ConfirmationDialog'
 import { geminiService } from './services/gemini'
 import { mcpService } from './services/mcp'
+import { agentFlowService } from './services/agent-flow'
 import type { AgentTask, ConfirmationGate } from './services/agent-flow'
 import { testOAuthOpen } from './test-oauth-open'
 
@@ -327,11 +328,39 @@ function App() {
           );
         }
       } else {
-        // Regular AI chat - no tool needed
-        console.log('[App] Regular chat message, calling Gemini...');
+        // Check if we should use agentic flow
+        const flatTools = mcpService.getAllTools().flatMap(server => server.tools);
+        const useAgenticFlow = await agentFlowService.shouldUseAgenticFlow(content, flatTools);
+
+        if (useAgenticFlow && flatTools.length > 0) {
+          console.log('[App] Using agentic flow for complex request');
+          // TODO: Implement full agentic flow with task creation and monitoring
+          // For now, fall through to enhanced streaming
+        }
+
+        // Enhanced AI chat with tool calling support
+        console.log('[App] Using Gemini streaming with tool support...');
         let chunkCount = 0;
 
-        for await (const chunk of geminiService.sendMessageStream(content)) {
+        // Define tool execution callback
+        const handleToolCall = async (toolName: string, args: any) => {
+          console.log(`[App] Tool call requested: ${toolName}`, args);
+
+          // Find which server has this tool
+          const allTools = mcpService.getAllTools();
+          const serverWithTool = allTools.find(server =>
+            server.tools.some(t => t.name === toolName)
+          );
+
+          if (!serverWithTool) {
+            throw new Error(`No MCP server found with tool: ${toolName}`);
+          }
+
+          // Call the tool via MCP service
+          return await mcpService.callTool(serverWithTool.serverId, toolName, args);
+        };
+
+        for await (const chunk of geminiService.sendMessageStream(content, handleToolCall)) {
           chunkCount++;
           setMessages((prev) =>
             prev.map((msg) =>
