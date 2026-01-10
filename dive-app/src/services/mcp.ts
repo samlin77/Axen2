@@ -87,7 +87,10 @@ export class MCPService {
 
   /**
    * Trigger OAuth flow for Google Workspace services by calling start_google_auth
+   * Note: Currently unused - OAuth is triggered automatically by workspace-mcp
+   * Kept as reference for future manual OAuth trigger implementation
    */
+  /*
   private async triggerGoogleOAuth(serverId: string): Promise<void> {
     console.log('🔐 Initiating Google OAuth flow via workspace-mcp...');
 
@@ -105,7 +108,7 @@ export class MCPService {
 
       // Call the start_google_auth tool to initiate OAuth
       // This will start the MCP server's OAuth callback server and return the auth URL
-      const result = await this.callTool(serverId, 'start_google_auth', {
+      await this.callTool(serverId, 'start_google_auth', {
         service_name: serviceName,
         user_google_email: 'samlin77@gmail.com', // Default email for OAuth setup
       });
@@ -116,6 +119,7 @@ export class MCPService {
       // Don't throw - connection can still proceed, OAuth will be triggered on first tool use
     }
   }
+  */
 
   /**
    * Connect to an MCP server using Tauri backend
@@ -157,13 +161,10 @@ export class MCPService {
       server.tools = (result as any).tools || [];
       server.resources = [];
 
-      // Auto-trigger OAuth for Google Workspace servers after successful connection
+      // Note: OAuth will be automatically triggered when user first uses a Google Workspace tool
+      // We don't pre-emptively call start_google_auth to avoid creating stale OAuth sessions
       if (this.isGoogleWorkspaceServer(serverId)) {
-        console.log('🔍 Detected Google Workspace server, initiating OAuth...');
-        // Don't await - let it run in background
-        this.triggerGoogleOAuth(serverId).catch(err => {
-          console.error('OAuth trigger failed:', err);
-        });
+        console.log('🔍 Google Workspace server connected. OAuth will be triggered on first tool use.');
       }
 
     } catch (error) {

@@ -53,7 +53,7 @@ export class GeminiService {
       name: tool.name,
       description: tool.description || `Execute ${tool.name}`,
       parameters: {
-        type: "object" as const,
+        type: "object",
         properties: tool.inputSchema.properties || {},
         required: tool.inputSchema.required || [],
       },
@@ -64,7 +64,7 @@ export class GeminiService {
     // Recreate model with tools
     this.model = genAI.getGenerativeModel({
       model: 'gemini-3-flash-preview',
-      tools: functionDeclarations.length > 0 ? [{ functionDeclarations }] : undefined,
+      tools: functionDeclarations.length > 0 ? [{ functionDeclarations }] as any : undefined,
     });
 
     // DON'T restart chat - keep conversation history
@@ -121,7 +121,7 @@ export class GeminiService {
         }
 
         // Check if the response contains function calls
-        let functionCalls;
+        let functionCalls: any = undefined;
         try {
           functionCalls = chunk.functionCalls();
           console.log('[Gemini] chunk.functionCalls():', functionCalls);

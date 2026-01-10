@@ -1,28 +1,14 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod mcp_process;
+
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex as StdMutex};
 use serde::{Deserialize, Serialize};
 use tauri::State;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct MCPServerConfig {
-    id: String,
-    name: String,
-    description: Option<String>,
-    command: String,
-    args: Vec<String>,
-    env: Option<HashMap<String, String>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct MCPTool {
-    name: String,
-    description: Option<String>,
-    #[serde(rename = "inputSchema")]
-    input_schema: serde_json::Value,
-}
+use mcp_process::{MCPProcess, MCPServerConfig, MCPTool, load_oauth_credentials};
+use tokio::sync::Mutex as TokioMutex;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct MCPServerState {
@@ -33,7 +19,8 @@ struct MCPServerState {
 }
 
 struct AppState {
-    servers: Mutex<HashMap<String, MCPServerState>>,
+    servers: StdMutex<HashMap<String, MCPServerState>>,
+    processes: StdMutex<HashMap<String, Arc<TokioMutex<MCPProcess>>>>,
 }
 
 #[tauri::command]
@@ -57,49 +44,44 @@ async fn connect_mcp_server(
         servers.insert(server_id.clone(), server_state.clone());
     }
 
-    // Simulate MCP connection - in production, spawn actual MCP server process
-    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    // Load OAuth credentials from environment
+    let oauth_env = load_oauth_credentials();
 
-    // Mock tools based on server type
-    let tools = match server_id.as_str() {
-        "filesystem" => vec![
-            MCPTool {
-                name: "read_file".to_string(),
-                description: Some("Read file contents".to_string()),
-                input_schema: serde_json::json!({
-                    "type": "object",
-                    "properties": {
-                        "path": {"type": "string"}
-                    },
-                    "required": ["path"]
-                }),
-            },
-            MCPTool {
-                name: "list_directory".to_string(),
-                description: Some("List directory contents".to_string()),
-                input_schema: serde_json::json!({
-                    "type": "object",
-                    "properties": {
-                        "path": {"type": "string"}
-                    },
-                    "required": ["path"]
-                }),
-            },
-        ],
-        "github" => vec![
-            MCPTool {
-                name: "search_repositories".to_string(),
-                description: Some("Search GitHub repositories".to_string()),
-                input_schema: serde_json::json!({
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string"}
-                    },
-                    "required": ["query"]
-                }),
-            },
-        ],
-        _ => vec![],
+    // Spawn real MCP server process
+    let spawn_result = MCPProcess::spawn(&config, oauth_env).await;
+
+    let mut process = match spawn_result {
+        Ok(p) => p,
+        Err(e) => {
+            server_state.status = "error".to_string();
+            server_state.error = Some(format!("Failed to spawn MCP server: {}", e));
+            let mut servers = state.servers.lock().unwrap();
+            servers.insert(server_id, server_state.clone());
+            return Err(e);
+        }
+    };
+
+    // Initialize MCP protocol
+    if let Err(e) = process.initialize().await {
+        let _ = process.kill().await;
+        server_state.status = "error".to_string();
+        server_state.error = Some(format!("Failed to initialize MCP protocol: {}", e));
+        let mut servers = state.servers.lock().unwrap();
+        servers.insert(server_id, server_state.clone());
+        return Err(format!("Failed to initialize MCP protocol: {}", e));
+    }
+
+    // List available tools (OAuth browser flow may happen here)
+    let tools = match process.list_tools().await {
+        Ok(t) => t,
+        Err(e) => {
+            let _ = process.kill().await;
+            server_state.status = "error".to_string();
+            server_state.error = Some(format!("Failed to list tools: {}", e));
+            let mut servers = state.servers.lock().unwrap();
+            servers.insert(server_id, server_state.clone());
+            return Err(format!("Failed to list tools: {}", e));
+        }
     };
 
     server_state.status = "connected".to_string();
@@ -107,7 +89,12 @@ async fn connect_mcp_server(
 
     {
         let mut servers = state.servers.lock().unwrap();
-        servers.insert(server_id, server_state.clone());
+        servers.insert(server_id.clone(), server_state.clone());
+    }
+
+    {
+        let mut processes = state.processes.lock().unwrap();
+        processes.insert(server_id, Arc::new(TokioMutex::new(process)));
     }
 
     Ok(server_state)
@@ -120,6 +107,21 @@ async fn disconnect_mcp_server(
 ) -> Result<(), String> {
     println!("Disconnecting MCP server: {}", server_id);
 
+    // Remove the process from the map
+    let process_arc = {
+        let mut processes = state.processes.lock().unwrap();
+        processes.remove(&server_id)
+    };
+
+    // Kill the process (outside the lock)
+    if let Some(process_arc) = process_arc {
+        let mut process = process_arc.lock().await;
+        if let Err(e) = process.kill().await {
+            println!("Warning: Failed to kill MCP server process: {}", e);
+        }
+    }
+
+    // Update server state
     let mut servers = state.servers.lock().unwrap();
     if let Some(server) = servers.get_mut(&server_id) {
         server.status = "disconnected".to_string();
@@ -138,71 +140,28 @@ async fn call_mcp_tool(
 ) -> Result<serde_json::Value, String> {
     println!("Calling tool {} on server {}", tool_name, server_id);
 
-    let servers = state.servers.lock().unwrap();
-    let server = servers.get(&server_id)
-        .ok_or_else(|| format!("Server {} not found", server_id))?;
+    // Check server status
+    {
+        let servers = state.servers.lock().unwrap();
+        let server = servers.get(&server_id)
+            .ok_or_else(|| format!("Server {} not found", server_id))?;
 
-    if server.status != "connected" {
-        return Err(format!("Server {} is not connected", server_id));
+        if server.status != "connected" {
+            return Err(format!("Server {} is not connected", server_id));
+        }
     }
 
-    // Mock tool execution - in production, send JSON-RPC to MCP server
-    let result = match (server_id.as_str(), tool_name.as_str()) {
-        ("filesystem", "read_file") => {
-            let path = args.get("path")
-                .and_then(|v| v.as_str())
-                .ok_or("Missing path argument")?;
-
-            match std::fs::read_to_string(path) {
-                Ok(content) => serde_json::json!({
-                    "success": true,
-                    "content": content,
-                    "path": path
-                }),
-                Err(e) => serde_json::json!({
-                    "success": false,
-                    "error": e.to_string()
-                }),
-            }
-        },
-        ("filesystem", "list_directory") => {
-            let path = args.get("path")
-                .and_then(|v| v.as_str())
-                .ok_or("Missing path argument")?;
-
-            match std::fs::read_dir(path) {
-                Ok(entries) => {
-                    let files: Vec<String> = entries
-                        .filter_map(|e| e.ok())
-                        .map(|e| e.file_name().to_string_lossy().to_string())
-                        .collect();
-
-                    serde_json::json!({
-                        "success": true,
-                        "files": files,
-                        "path": path
-                    })
-                },
-                Err(e) => serde_json::json!({
-                    "success": false,
-                    "error": e.to_string()
-                }),
-            }
-        },
-        ("github", "search_repositories") => {
-            serde_json::json!({
-                "success": true,
-                "message": "GitHub API integration pending",
-                "query": args.get("query")
-            })
-        },
-        _ => serde_json::json!({
-            "success": false,
-            "error": format!("Unknown tool: {}", tool_name)
-        }),
+    // Get the process Arc (outside the lock)
+    let process_arc = {
+        let processes = state.processes.lock().unwrap();
+        processes.get(&server_id)
+            .ok_or_else(|| format!("Process for server {} not found", server_id))?
+            .clone()
     };
 
-    Ok(result)
+    // Call the tool via JSON-RPC
+    let mut process = process_arc.lock().await;
+    process.call_tool(&tool_name, args).await
 }
 
 #[tauri::command]
@@ -213,17 +172,37 @@ async fn get_mcp_servers(
     Ok(servers.values().cloned().collect())
 }
 
+#[tauri::command]
+async fn mcp_health_check(
+    server_id: String,
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    let process_arc = {
+        let processes = state.processes.lock().unwrap();
+        processes.get(&server_id).cloned()
+    };
+
+    if let Some(process_arc) = process_arc {
+        let mut process = process_arc.lock().await;
+        Ok(process.is_alive())
+    } else {
+        Ok(false)
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .manage(AppState {
-            servers: Mutex::new(HashMap::new()),
+            servers: StdMutex::new(HashMap::new()),
+            processes: StdMutex::new(HashMap::new()),
         })
         .invoke_handler(tauri::generate_handler![
             connect_mcp_server,
             disconnect_mcp_server,
             call_mcp_tool,
             get_mcp_servers,
+            mcp_health_check,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
