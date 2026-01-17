@@ -169,8 +169,8 @@ Enable these Google APIs in your project:
 
 Copy the Client ID and Client Secret to your `.env` file:
 ```bash
-VITE_GOOGLE_OAUTH_CLIENT_ID=your_client_id.apps.googleusercontent.com
-VITE_GOOGLE_OAUTH_CLIENT_SECRET=GOCSPX-your_client_secret
+VITE_GOOGLE_OAUTH_CLIENT_ID=851xxxxxxxx-xxx.apps.googleusercontent.com
+VITE_GOOGLE_OAUTH_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxx
 ```
 
 ### 4. Test OAuth Flow
